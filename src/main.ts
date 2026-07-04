@@ -271,8 +271,8 @@ function drawSmasher() {
   const rockCenterY = window.innerHeight / 2 - 20;
   const baseX = rockCenterX + Math.min(window.innerWidth * 0.16, 70);
   const baseY = rockCenterY - Math.min(window.innerHeight * 0.12, 70);
-  const smasherWidth = Math.min(window.innerWidth * 0.25, 140);
-  const smasherHeight = Math.min(window.innerHeight * 0.2, 140);
+  const smasherWidth = Math.min(window.innerWidth * 0.3, 180);
+  const smasherHeight = Math.min(window.innerHeight * 0.16, 60);
   const swingAmount = currentRock.phase === "striking"
     ? Math.sin(animationTime * 12) * 0.18 - 0.2
     : -0.2;
