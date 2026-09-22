@@ -108,14 +108,22 @@ canvas {
 }
 
 .icon-btn {
-  width: 40px;
-  height: 40px;
+  min-width: 44px;
+  height: 36px;
+  padding: 0 10px;
   border-radius: 10px;
   border: 1px solid rgba(255, 255, 255, 0.14);
   background: rgba(12, 10, 9, 0.65);
   color: var(--text);
-  font-size: 1rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
   cursor: pointer;
+}
+
+.icon-btn.muted {
+  color: var(--danger);
+  border-color: rgba(248, 113, 113, 0.45);
 }
 
 .icon-btn:hover {

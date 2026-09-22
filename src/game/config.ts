@@ -10,7 +10,7 @@ export const SMASHERS: SmasherDef[] = [
     damage: 14,
     unlockScore: 0,
     accent: "#a8a29e",
-    strikeDuration: 0.42,
+    strikeDuration: 0.28,
   },
   {
     id: "lightning",
@@ -18,7 +18,7 @@ export const SMASHERS: SmasherDef[] = [
     damage: 24,
     unlockScore: 150,
     accent: "#38bdf8",
-    strikeDuration: 0.36,
+    strikeDuration: 0.24,
   },
   {
     id: "fire",
@@ -26,7 +26,7 @@ export const SMASHERS: SmasherDef[] = [
     damage: 38,
     unlockScore: 420,
     accent: "#f97316",
-    strikeDuration: 0.34,
+    strikeDuration: 0.22,
   },
   {
     id: "diamond",
@@ -34,7 +34,7 @@ export const SMASHERS: SmasherDef[] = [
     damage: 58,
     unlockScore: 950,
     accent: "#22d3ee",
-    strikeDuration: 0.3,
+    strikeDuration: 0.2,
   },
 ];
 

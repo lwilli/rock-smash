@@ -80,6 +80,7 @@ export class RockSmashGame {
   private bgDust: { x: number; y: number; s: number; a: number }[] = [];
   private pendingVictory = false;
   private pendingBreak = false;
+  private hitQueued = false;
 
   constructor(app: HTMLElement) {
     this.canvas = document.createElement("canvas");
@@ -109,7 +110,7 @@ export class RockSmashGame {
           <span class="brand-name">Rock Smash</span>
         </div>
         <div class="top-actions">
-          <button type="button" class="icon-btn" id="mute-btn" title="Mute">♪</button>
+          <button type="button" class="icon-btn" id="mute-btn" title="Mute">SFX</button>
         </div>
       </div>
 
@@ -217,7 +218,12 @@ export class RockSmashGame {
 
   private showTitle() {
     this.screen = "title";
-    const hasProgress = this.score > 0 || this.rockCount > 0 || this.smasherIndex > 0;
+    const hasProgress =
+      this.score > 0 ||
+      this.smasherIndex > 0 ||
+      this.bestScore > 0 ||
+      this.crystalsFound > 0 ||
+      this.victories > 0;
     this.hud.overlay.hidden = false;
     this.hud.overlay.classList.remove("victory");
     (this.hud.overlay.querySelector("#overlay-eyebrow") as HTMLElement).textContent =
@@ -291,8 +297,9 @@ export class RockSmashGame {
 
     this.hud.muteBtn.addEventListener("click", () => {
       audio.setMuted(!audio.isMuted());
-      this.hud.muteBtn.textContent = audio.isMuted() ? "✕" : "♪";
+      this.hud.muteBtn.textContent = audio.isMuted() ? "OFF" : "SFX";
       this.hud.muteBtn.title = audio.isMuted() ? "Unmute" : "Mute";
+      this.hud.muteBtn.classList.toggle("muted", audio.isMuted());
     });
 
     this.hud.overlayPrimary.addEventListener("click", () => {
@@ -384,8 +391,19 @@ export class RockSmashGame {
       this.advanceRock();
       return;
     }
+    if (this.rock.phase === "striking") {
+      // Buffer a hit once the swing has landed so rapid taps feel responsive
+      const t = this.animationTime / SMASHERS[this.smasherIndex].strikeDuration;
+      if (t >= 0.45) this.hitQueued = true;
+      return;
+    }
     if (this.rock.phase !== "ready") return;
 
+    this.performStrike();
+  }
+
+  private performStrike() {
+    this.hitQueued = false;
     const smasher = SMASHERS[this.smasherIndex];
     this.rock.damage = Math.min(this.rock.maxHp, this.rock.damage + smasher.damage);
     this.rock.phase = "striking";
@@ -534,13 +552,16 @@ export class RockSmashGame {
         } else {
           this.rock.phase = "ready";
           this.animationTime = 0;
+          if (this.hitQueued) this.performStrike();
         }
       }
     }
 
     if (this.rock.phase === "revealing" && this.screen === "playing") {
       this.rock.revealTimer += dt;
-      if (this.rock.revealTimer >= REVEAL_AUTO_ADVANCE) {
+      const revealLimit =
+        this.rock.crystalId === ULTIMATE.id ? REVEAL_AUTO_ADVANCE + 0.9 : REVEAL_AUTO_ADVANCE;
+      if (this.rock.revealTimer >= revealLimit) {
         this.advanceRock();
       }
     }
@@ -590,12 +611,11 @@ export class RockSmashGame {
   }
 
   private drawCracks(width: number, height: number, damageRatio: number) {
-    if (damageRatio <= 0.05) return;
-    const stages = damageRatio < 0.3 ? 1 : damageRatio < 0.55 ? 2 : damageRatio < 0.8 ? 3 : 4;
+    if (damageRatio <= 0.04) return;
+    const stages = damageRatio < 0.28 ? 1 : damageRatio < 0.5 ? 2 : damageRatio < 0.72 ? 3 : 4;
     this.ctx.save();
-    this.ctx.strokeStyle = `rgba(12, 10, 9, ${0.35 + stages * 0.12})`;
-    this.ctx.lineWidth = 2;
     this.ctx.lineCap = "round";
+    this.ctx.lineJoin = "round";
 
     const paths: [number, number][][] = [
       [[-0.05, -0.35], [0.02, -0.05], [0.18, 0.15], [0.08, 0.38]],
@@ -606,6 +626,9 @@ export class RockSmashGame {
 
     for (let s = 0; s < stages; s += 1) {
       const path = paths[s];
+      // Outer bright seam
+      this.ctx.strokeStyle = `rgba(250, 250, 249, ${0.25 + stages * 0.08})`;
+      this.ctx.lineWidth = 3.5;
       this.ctx.beginPath();
       path.forEach(([px, py], i) => {
         const x = px * width;
@@ -615,7 +638,18 @@ export class RockSmashGame {
       });
       this.ctx.stroke();
 
-      // Branch
+      // Inner dark crack
+      this.ctx.strokeStyle = `rgba(12, 10, 9, ${0.55 + stages * 0.1})`;
+      this.ctx.lineWidth = 2;
+      this.ctx.beginPath();
+      path.forEach(([px, py], i) => {
+        const x = px * width;
+        const y = py * height;
+        if (i === 0) this.ctx.moveTo(x, y);
+        else this.ctx.lineTo(x, y);
+      });
+      this.ctx.stroke();
+
       if (stages >= 3 && s < 2) {
         this.ctx.beginPath();
         this.ctx.moveTo(path[1][0] * width, path[1][1] * height);
