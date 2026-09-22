@@ -667,13 +667,6 @@ export class RockSmashGame {
 
     this.drawCracks(rw, rh, this.rock.damage / this.rock.maxHp);
 
-    if (this.rock.hitFlash > 0) {
-      this.ctx.globalAlpha = this.rock.hitFlash * 2;
-      this.ctx.fillStyle = "rgba(255,255,255,0.35)";
-      this.ctx.fillRect(-rw / 2, -rh / 2, rw, rh);
-      this.ctx.globalAlpha = 1;
-    }
-
     // Strike effect overlay
     if (this.rock.phase === "striking") {
       const sprites = smasherSprites[SMASHERS[this.smasherIndex].id];
@@ -803,6 +796,13 @@ export class RockSmashGame {
   }
 
   private drawFlash() {
+    // Full-screen hit flash — avoids a rectangular AABB overlay on the rock sprite
+    if (this.rock.hitFlash > 0) {
+      const a = Math.min(0.32, this.rock.hitFlash * 1.5);
+      this.ctx.fillStyle = `rgba(255,255,255,${a})`;
+      this.ctx.fillRect(0, 0, window.innerWidth, window.innerHeight);
+    }
+
     if (this.rock.phase !== "revealing" || this.rock.crystalId === "none") return;
     const alpha = this.rock.revealTimer < 0.25 ? 0.28 : 0.08;
     const color =
