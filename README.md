@@ -33,3 +33,7 @@ npm run build
 ## Design notes
 
 See [`.agents/DESIGN.md`](.agents/DESIGN.md) for balancing and feature decisions.
+
+## Sprite extraction
+
+To re-slice or rebuild rock/crystal sprites from `assets/rocks-and-crystals.png`, follow [`.agents/sprite-extraction-guide.md`](.agents/sprite-extraction-guide.md). Default automation: `python3 scripts/extract-sprites.py`.
