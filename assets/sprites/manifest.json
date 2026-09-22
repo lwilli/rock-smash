@@ -1,0 +1,47 @@
+{
+  "rocks": [
+    "rocks/rock_01.png",
+    "rocks/rock_02.png",
+    "rocks/rock_03.png",
+    "rocks/rock_04.png",
+    "rocks/rock_05.png",
+    "rocks/rock_06.png",
+    "rocks/rock_07.png",
+    "rocks/rock_08.png",
+    "rocks/rock_09.png",
+    "rocks/rock_10.png"
+  ],
+  "crystals": [
+    "crystals/blue_pyramid.png",
+    "crystals/blue_cluster.png",
+    "crystals/orange_star.png",
+    "crystals/green_shield.png",
+    "crystals/purple_spikes.png",
+    "crystals/green_diamond.png",
+    "crystals/ultimate_gold.png"
+  ],
+  "smashers": {
+    "stone": {
+      "idle": "smashers/stone_idle.png",
+      "swing1": "smashers/stone_swing1.png",
+      "swing2": "smashers/stone_swing2.png",
+      "effect": "smashers/stone_effect.png"
+    },
+    "lightning": {
+      "idle": "smashers/lightning_idle.png",
+      "swing1": "smashers/lightning_swing1.png",
+      "swing2": "smashers/lightning_swing2.png",
+      "effect": "smashers/lightning_effect.png"
+    },
+    "fire": {
+      "idle": "smashers/fire_idle.png",
+      "swing1": "smashers/fire_swing1.png",
+      "effect": "smashers/fire_effect.png"
+    },
+    "diamond": {
+      "idle": "smashers/diamond_idle.png",
+      "swing1": "smashers/diamond_swing1.png",
+      "effect": "smashers/diamond_effect.png"
+    }
+  }
+}
