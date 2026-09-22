@@ -41,8 +41,6 @@ type HudEls = {
   unlockFill: HTMLElement;
   rocks: HTMLElement;
   crystals: HTMLElement;
-  hint: HTMLElement;
-  nextBtn: HTMLButtonElement;
   muteBtn: HTMLButtonElement;
   toast: HTMLElement;
   overlay: HTMLElement;
@@ -126,8 +124,6 @@ export class RockSmashGame {
           <span>Rocks <strong id="rocks">0</strong></span>
           <span>Crystals <strong id="crystals">0</strong></span>
         </div>
-        <p class="hint" id="hint">Tap the rock to smash</p>
-        <button type="button" id="next-rock" class="next-button" disabled>Next rock</button>
       </div>
 
       <div class="hp-wrap" id="hp-wrap">
@@ -161,8 +157,6 @@ export class RockSmashGame {
       unlockFill: root.querySelector("#unlock-fill")!,
       rocks: root.querySelector("#rocks")!,
       crystals: root.querySelector("#crystals")!,
-      hint: root.querySelector("#hint")!,
-      nextBtn: root.querySelector("#next-rock") as HTMLButtonElement,
       muteBtn: root.querySelector("#mute-btn") as HTMLButtonElement,
       toast: root.querySelector("#toast")!,
       overlay: root.querySelector("#overlay")!,
@@ -290,11 +284,6 @@ export class RockSmashGame {
     this.canvas.addEventListener("pointerdown", onDown);
     window.addEventListener("pointerup", onUp);
     window.addEventListener("pointercancel", onUp);
-
-    this.hud.nextBtn.addEventListener("click", () => {
-      audio.ui();
-      this.advanceRock();
-    });
 
     this.hud.muteBtn.addEventListener("click", () => {
       audio.setMuted(!audio.isMuted());
@@ -520,28 +509,6 @@ export class RockSmashGame {
     const hpLeft = Math.max(0, 1 - this.rock.damage / this.rock.maxHp);
     this.hud.hpFill.style.width = `${hpLeft * 100}%`;
     this.hud.hpWrap.classList.toggle("hidden-hp", this.rock.phase === "revealing" || this.screen !== "playing");
-
-    const revealing = this.rock.phase === "revealing" && this.screen === "playing";
-    const canAdvance = revealing && this.revealLock <= 0;
-    this.hud.nextBtn.disabled = !canAdvance;
-    this.hud.nextBtn.classList.toggle("ready", canAdvance);
-
-    if (this.screen !== "playing") {
-      this.hud.hint.textContent = "";
-    } else if (revealing) {
-      if (this.revealLock > 0) {
-        this.hud.hint.textContent =
-          this.rock.crystalId === "none" ? "…" : "Crystal found!";
-      } else if (this.rock.crystalId === "none") {
-        this.hud.hint.textContent = "Empty rock — tap or press Next";
-      } else if (this.rock.crystalId === ULTIMATE.id) {
-        this.hud.hint.textContent = "Ultimate Crystal! Tap to continue";
-      } else {
-        this.hud.hint.textContent = "Crystal found — tap or press Next";
-      }
-    } else {
-      this.hud.hint.textContent = `Tap to smash · ${smasher.damage} dmg / hit`;
-    }
   }
 
   private update(dt: number) {
