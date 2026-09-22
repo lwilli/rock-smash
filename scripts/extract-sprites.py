@@ -656,6 +656,120 @@ def extract(src, box, outpath, pad=4):
     print(f"  {os.path.relpath(outpath, ROOT)}: {crop.size}")
 
 
+def clean_smasher_bottom(img):
+    """Drop sheet frame labels below the weapon and peel soft underside fringe/whiskers.
+
+    Keeps saturated lightning cyan; removes detached label glyphs (e.g. IDLE) and
+    light sheet bleed clinging under the silhouette.
+    """
+    img = img.convert("RGBA").copy()
+    w, h = img.size
+    px = img.load()
+
+    visited = [[False] * w for _ in range(h)]
+    comps = []
+    for y in range(h):
+        for x in range(w):
+            if visited[y][x] or px[x, y][3] < 30:
+                continue
+            q = deque([(x, y)])
+            visited[y][x] = True
+            cells = []
+            while q:
+                cx, cy = q.popleft()
+                cells.append((cx, cy))
+                for nx, ny in ((cx + 1, cy), (cx - 1, cy), (cx, cy + 1), (cx, cy - 1)):
+                    if 0 <= nx < w and 0 <= ny < h and not visited[ny][nx] and px[nx, ny][3] >= 30:
+                        visited[ny][nx] = True
+                        q.append((nx, ny))
+            comps.append(cells)
+    if not comps:
+        return img
+    comps.sort(key=len, reverse=True)
+    main = comps[0]
+    main_ymax = max(y for _, y in main)
+    keep = set(main)
+    for c in comps[1:]:
+        y0 = min(y for _, y in c)
+        if y0 >= main_ymax:
+            continue
+        if len(c) < 40:
+            continue
+        keep.update(c)
+    for y in range(h):
+        for x in range(w):
+            if (x, y) not in keep:
+                px[x, y] = (0, 0, 0, 0)
+
+    n4 = ((-1, 0), (1, 0), (0, -1), (0, 1))
+    for _ in range(8):
+        to_clear = []
+        for y in range(h):
+            for x in range(w):
+                r, g, b, a = px[x, y]
+                if a < 30:
+                    continue
+                empty = sum(
+                    1
+                    for dx, dy in n4
+                    if (not (0 <= x + dx < w and 0 <= y + dy < h)) or px[x + dx, y + dy][3] < 30
+                )
+                if empty == 0:
+                    continue
+                avg = avg_of(r, g, b)
+                chroma = max(abs(r - g), abs(g - b), abs(r - b))
+                lightning = b >= r + 25 and b >= 120 and chroma >= 40
+                on8 = sum(
+                    1
+                    for dx in (-1, 0, 1)
+                    for dy in (-1, 0, 1)
+                    if not (dx == 0 and dy == 0)
+                    and 0 <= x + dx < w
+                    and 0 <= y + dy < h
+                    and px[x + dx, y + dy][3] >= 30
+                )
+                if on8 <= 1:
+                    to_clear.append((x, y))
+                    continue
+                if not lightning and avg >= 100 and chroma <= 50 and max(r, g, b) <= 175:
+                    to_clear.append((x, y))
+                    continue
+                # Tip whisker under the head
+                if x < w * 0.4 and y > h * 0.65:
+                    up = y > 0 and px[x, y - 1][3] >= 30
+                    down = y + 1 < h and px[x, y + 1][3] >= 30
+                    left = x > 0 and px[x - 1, y][3] >= 30
+                    right = x + 1 < w and px[x + 1, y][3] >= 30
+                    if up and not down and not left and not right:
+                        to_clear.append((x, y))
+                    elif up and not down and (int(left) + int(right)) <= 1 and on8 <= 4 and max(r, g, b) <= 90:
+                        to_clear.append((x, y))
+        if not to_clear:
+            break
+        for x, y in to_clear:
+            px[x, y] = (0, 0, 0, 0)
+
+    bbox = img.getbbox()
+    return img.crop(bbox) if bbox else img
+
+
+def extract_smasher(src, box, outpath, pad=4, clean_bottom=False):
+    x0, y0, x1, y1 = box
+    x0 = max(0, x0 - pad)
+    y0 = max(0, y0 - pad)
+    x1 = min(src.width, x1 + pad)
+    y1 = min(src.height, y1 + pad)
+    crop = flood_clear_bg(src.crop((x0, y0, x1, y1)))
+    if clean_bottom:
+        crop = clean_smasher_bottom(crop)
+    bbox = crop.getbbox()
+    if bbox:
+        crop = crop.crop(bbox)
+    os.makedirs(os.path.dirname(outpath), exist_ok=True)
+    crop.save(outpath)
+    print(f"  {os.path.relpath(outpath, ROOT)}: {crop.size}")
+
+
 def extract_crystal(src, box, outpath, family, pad=2):
     x0, y0, x1, y1 = box
     x0 = max(0, x0 - pad)
@@ -735,8 +849,9 @@ def main():
             "effect": (1050, 152, 1130, 238),
         },
         "lightning": {
-            "idle": (23, 344, 287, 453),
-            "swing1": (365, 343, 628, 453),
+            # Idle y1 tightened to exclude the "IDLE" sheet label under the weapon.
+            "idle": (23, 344, 287, 448),
+            "swing1": (365, 343, 628, 450),
             "swing2": (702, 335, 957, 446),
             "effect": (1034, 339, 1145, 445),
         },
@@ -754,7 +869,12 @@ def main():
     print("Smashers:")
     for key, frames in smashers.items():
         for frame, box in frames.items():
-            extract(smash_raw, box, os.path.join(OUT, f"smashers/{key}_{frame}.png"))
+            extract_smasher(
+                smash_raw,
+                box,
+                os.path.join(OUT, f"smashers/{key}_{frame}.png"),
+                clean_bottom=(key == "lightning"),
+            )
 
 
 if __name__ == "__main__":

@@ -246,14 +246,25 @@ Commit PNG under assets/sprites/
 
 ---
 
+## Smashers (`assets/smashers.png`)
+
+Same opaque-sheet rules. Extra pitfalls:
+
+- **Frame labels** under weapons (e.g. `IDLE` under lightning idle) survive flood-clear because they are dark grey, not sheet background. Drop secondary components whose `ymin >= main_ymax`, and tighten crop `y1` so labels stay out of the box.
+- **Underside fringe** — peel exterior low-chroma mid greys; protect saturated lightning cyan.
+- **Tip whiskers** — 1-wide vertical filaments under the head tip; peel those specifically.
+- Lightning frames use `extract_smasher(..., clean_bottom=True)` in `extract-sprites.py`.
+
 ## Quick reference — important files
 
 | Path | Role |
 |------|------|
 | `assets/rocks-and-crystals.png` | Opaque source sheet |
+| `assets/smashers.png` | Smasher sheet (stone / lightning / fire / diamond) |
 | `scripts/extract-sprites.py` | Path A automation |
 | `assets/sprites/rocks/` | Rock outputs (`rock_01`…`rock_10`) |
 | `assets/sprites/crystals/` | Crystal outputs |
+| `assets/sprites/smashers/` | Smasher frame outputs |
 | `assets/sprites/rocks/rock_01.png` | Style / edge quality reference |
 | `assets/sprites/crystals/blue_cluster.png` | Clean crystal reference |
 
