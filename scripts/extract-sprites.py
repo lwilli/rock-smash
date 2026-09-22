@@ -609,6 +609,38 @@ def extract_rock(src, box, outpath, pad=6, morph=True, fringe_avg=175, warm_prot
     print(f"  {os.path.relpath(outpath, ROOT)}: {img.size}")
 
 
+def strip_stone_right_head(img, idle_img, right_start=160, cut_y=47):
+    """Stone swing frames in the sheet have a second head on the handle end.
+
+    Keep only the left striking head and rebuild a plain handle tip from idle.
+    """
+    out = img.convert("RGBA").copy()
+    idle = idle_img.convert("RGBA")
+    sw, sh = out.size
+    iw, ih = idle.size
+    op = out.load()
+    ip = idle.load()
+    for y in range(cut_y, sh):
+        for x in range(right_start, sw):
+            op[x, y] = (0, 0, 0, 0)
+    for y in range(min(cut_y, ih, sh)):
+        for x in range(right_start, sw):
+            ix = min(max(x, 0), iw - 1)
+            r, g, b, a = ip[ix, y]
+            op[x, y] = (r, g, b, a) if a > 20 else (0, 0, 0, 0)
+    for y in range(sh):
+        for x in range(230, sw):
+            ix = min(x, iw - 1)
+            iy = min(y, ih - 1)
+            if y >= 48:
+                op[x, y] = (0, 0, 0, 0)
+            else:
+                r, g, b, a = ip[ix, iy]
+                op[x, y] = (r, g, b, a) if a > 20 else (0, 0, 0, 0)
+    bbox = out.getbbox()
+    return out.crop(bbox) if bbox else out
+
+
 def extract(src, box, outpath, pad=4):
     x0, y0, x1, y1 = box
     x0 = max(0, x0 - pad)
