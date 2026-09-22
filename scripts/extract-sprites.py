@@ -3,6 +3,11 @@
 
 Crystal extraction peels light sheet-bleed fringe that flood-fill alone leaves behind.
 Ultimate uses a protected flood so gold/cyan pixels are never cleared as background.
+
+When flood+peel still leaves fringe, whiskers, ground-bar bleed, or checker-in-glow
+(see rock_08 / rock_10 / ultimate_gold), do not keep tuning forever — follow the
+rebuild path in .agents/sprite-extraction-guide.md (magenta AI rebuild → chromakey
+→ hole-fill → NEAREST downsample → edge metrics).
 """
 
 from PIL import Image
