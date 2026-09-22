@@ -75,6 +75,7 @@ export const crystalImages: Record<string, HTMLImageElement> = {
 export const smasherSprites: Record<SmasherId, SmasherSprites> = {
   stone: {
     idle: loadImage(stoneIdle),
+    // Sheet order is wind-up then impact; keep chronological
     swings: [loadImage(stoneSwing1), loadImage(stoneSwing2)],
     effect: loadImage(stoneEffect),
   },

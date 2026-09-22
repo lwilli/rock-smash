@@ -1,7 +1,6 @@
 import {
   CRYSTALS,
   EMPTY_ROCK_CHANCE,
-  REVEAL_AUTO_ADVANCE,
   ROCK_HP,
   ROCK_VARIANT_COUNT,
   SMASHERS,
@@ -81,6 +80,8 @@ export class RockSmashGame {
   private pendingVictory = false;
   private pendingBreak = false;
   private hitQueued = false;
+  /** Blocks advancing past a reveal so the breaking tap can't skip the gem. */
+  private revealLock = 0;
 
   constructor(app: HTMLElement) {
     this.canvas = document.createElement("canvas");
@@ -376,6 +377,7 @@ export class RockSmashGame {
 
   private advanceRock() {
     if (this.rock.phase !== "revealing") return;
+    if (this.revealLock > 0) return;
     if (this.pendingVictory) {
       this.showVictory();
       return;
@@ -388,6 +390,7 @@ export class RockSmashGame {
     if (this.screen !== "playing") return;
 
     if (this.rock.phase === "revealing") {
+      if (this.revealLock > 0) return;
       this.advanceRock();
       return;
     }
@@ -424,6 +427,7 @@ export class RockSmashGame {
 
   private breakRock() {
     this.pendingBreak = false;
+    this.hitQueued = false;
     const center = this.rockCenter();
     spawnBreakBurst(this.particles, center.x, center.y);
     audio.breakRock();
@@ -431,6 +435,8 @@ export class RockSmashGame {
     this.rock.phase = "revealing";
     this.rock.revealTimer = 0;
     this.animationTime = 0;
+    // Require a deliberate follow-up tap; ignore the breaking strike / queued hits
+    this.revealLock = 0.6;
 
     if (this.rock.crystalId !== "none") {
       this.score += this.rock.points;
@@ -516,18 +522,23 @@ export class RockSmashGame {
     this.hud.hpWrap.classList.toggle("hidden-hp", this.rock.phase === "revealing" || this.screen !== "playing");
 
     const revealing = this.rock.phase === "revealing" && this.screen === "playing";
-    this.hud.nextBtn.disabled = !revealing;
-    this.hud.nextBtn.classList.toggle("ready", revealing);
+    const canAdvance = revealing && this.revealLock <= 0;
+    this.hud.nextBtn.disabled = !canAdvance;
+    this.hud.nextBtn.classList.toggle("ready", canAdvance);
 
     if (this.screen !== "playing") {
       this.hud.hint.textContent = "";
     } else if (revealing) {
-      this.hud.hint.textContent =
-        this.rock.crystalId === "none"
-          ? "Empty rock — tap or press Next"
-          : this.rock.crystalId === ULTIMATE.id
-            ? "Ultimate Crystal! Tap to continue"
-            : "Crystal found — tap or press Next";
+      if (this.revealLock > 0) {
+        this.hud.hint.textContent =
+          this.rock.crystalId === "none" ? "…" : "Crystal found!";
+      } else if (this.rock.crystalId === "none") {
+        this.hud.hint.textContent = "Empty rock — tap or press Next";
+      } else if (this.rock.crystalId === ULTIMATE.id) {
+        this.hud.hint.textContent = "Ultimate Crystal! Tap to continue";
+      } else {
+        this.hud.hint.textContent = "Crystal found — tap or press Next";
+      }
     } else {
       this.hud.hint.textContent = `Tap to smash · ${smasher.damage} dmg / hit`;
     }
@@ -538,6 +549,7 @@ export class RockSmashGame {
     this.screenShake = Math.max(0, this.screenShake - dt * 28);
     this.rock.hitFlash = Math.max(0, this.rock.hitFlash - dt);
     this.rock.shake = Math.max(0, this.rock.shake - dt * 36);
+    this.revealLock = Math.max(0, this.revealLock - dt);
 
     if (this.toastTimer > 0) {
       this.toastTimer -= dt;
@@ -559,11 +571,7 @@ export class RockSmashGame {
 
     if (this.rock.phase === "revealing" && this.screen === "playing") {
       this.rock.revealTimer += dt;
-      const revealLimit =
-        this.rock.crystalId === ULTIMATE.id ? REVEAL_AUTO_ADVANCE + 0.9 : REVEAL_AUTO_ADVANCE;
-      if (this.rock.revealTimer >= revealLimit) {
-        this.advanceRock();
-      }
+      // No auto-advance — player must tap / press Next to continue
     }
 
     updateParticles(this.particles, dt);
@@ -790,15 +798,18 @@ export class RockSmashGame {
     let bob = Math.sin(performance.now() / 500) * 3;
 
     if (this.rock.phase === "striking") {
-      const t = this.animationTime / smasher.strikeDuration;
+      const t = Math.min(1, this.animationTime / smasher.strikeDuration);
       const swingFrames = sprites.swings;
       if (swingFrames.length > 1) {
-        frame = t < 0.45 ? swingFrames[0] : swingFrames[1];
+        // Wind-up frame first, impact frame as the swing lands
+        frame = t < 0.55 ? swingFrames[0] : swingFrames[1];
       } else {
         frame = swingFrames[0] ?? sprites.idle;
       }
-      angle = -0.55 + Math.sin(Math.min(1, t) * Math.PI) * 0.75;
-      bob = 8;
+      // One-way clockwise strike (head is on the left of each sprite)
+      const ease = 1 - (1 - t) * (1 - t);
+      angle = -0.55 + ease * 0.85;
+      bob = 6 + ease * 10;
     }
 
     const maxW = Math.min(window.innerWidth * 0.42, smasher.id === "fire" && this.rock.phase === "striking" ? 320 : 200);
@@ -815,7 +826,8 @@ export class RockSmashGame {
     this.ctx.translate(baseX, baseY + bob);
     this.ctx.rotate(angle);
     if (imageReady(frame)) {
-      this.ctx.drawImage(frame, -sw * 0.55, -sh / 2, sw, sh);
+      // Pivot near the handle (right side); head is on the left and arcs into the rock
+      this.ctx.drawImage(frame, -sw * 0.72, -sh / 2, sw, sh);
     } else {
       this.ctx.fillStyle = smasher.accent;
       this.ctx.fillRect(-40, -12, 90, 24);

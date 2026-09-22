@@ -91,5 +91,4 @@ export const ULTIMATE = {
 };
 
 export const EMPTY_ROCK_CHANCE = 0.32;
-export const REVEAL_AUTO_ADVANCE = 1.65;
 export const ROCK_VARIANT_COUNT = 10;
